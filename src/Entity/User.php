@@ -3,15 +3,16 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
+use ApiPlatform\Core\Bridge\Symfony\Validator\Validator;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraint as Assert;
-
+use Symfony\Component\Validator\Constraints as Assert;
 
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -20,6 +21,8 @@ use Symfony\Component\Validator\Constraint as Assert;
     collectionOperations: ["get", "post"],
     normalizationContext: ['groups'=>'read']
 )]
+#[UniqueEntity(fields: ['name', 'email'], message: "User has already been created.")]
+
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -31,15 +34,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups("read")]
     #[ORM\Column(type: 'string', length: 255)]
     #[Assert\NotBlank]
+    #[Assert\Length(
+        min: 5,max: 255
+    )]
     private $username;
 
     #[ORM\Column(type: 'string', length: 255)]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 3,max: 255)]
+//    #[Assert\Regex(pattern: "")]
     private $password;
+
+    #[Assert\Expression(
+        message: "Passwords must match",expression: "this.getPassword()===this.getRetypedPassword()"
+    )]
+    #[Assert\NotBlank]
+    private $retypedPassword;
 
     #[Groups("read")]
     #[ORM\Column(type: 'string', length: 255)]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 3,max: 255)]
     private $name;
 
     #[ORM\Column(type: 'string', length: 255)]
@@ -89,6 +104,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+    /**
+     * @return mixed
+     */
+    public function getRetypedPassword()
+    {
+        return $this->retypedPassword;
+    }
+
+    /**
+     * @param mixed $retypedPassword
+     */
+    public function setRetypedPassword($retypedPassword): void
+    {
+        $this->retypedPassword = $retypedPassword;
+    }
+
+
 
     public function getName(): ?string
     {
